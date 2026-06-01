@@ -1,0 +1,35 @@
+{
+  "name": "hn-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "react-router build",
+    "dev": "react-router dev",
+    "start": "react-router-serve ./build/server/index.js",
+    "typecheck": "react-router typegen && tsc"
+  },
+  "dependencies": {
+    "@firebase/firestore": "^4.14.1",
+    "@react-router/node": "7.15.0",
+    "@react-router/serve": "7.15.0",
+    "firebase": "^12.13.0",
+    "firebase-tools": "^15.17.0",
+    "isbot": "^5.1.36",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-router": "7.15.0",
+    "zustand": "^5.0.13"
+  },
+  "devDependencies": {
+    "@react-router/dev": "7.15.0",
+    "@tailwindcss/vite": "^4.2.2",
+    "@types/node": "^22",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "tailwindcss": "^4.2.2",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.3"
+  }
+}

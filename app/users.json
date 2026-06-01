@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "description": "Initial user seed data. Add more user objects to the users array in the future.",
+  "admin": {
+    "id": 1,
+    "name": "Admin User",
+    "email": "admin@example.com",
+    "password": "admin",
+
+    "role": "admin"
+  },
+  "users": [
+    {
+      "id": 2,
+      "name": "NS COMPUTERS",
+      "email": "user1@example.com",
+      "password": "user",
+
+      "role": "user"
+    },
+    {
+      "id": 3,
+      "name": "IT COMPUTERS",
+      "email": "user2@example.com",
+      "password": "user",
+
+      "role": "user"
+    },
+    {
+      "id": 4,
+      "name": "Customer View",
+      "email": "customer@example.com",
+      "password": "customer",
+
+      "role": "customer"
+    }
+  ]
+}
