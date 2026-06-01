@@ -33,6 +33,14 @@
       "password": "customer",
 
       "role": "customer"
+    },
+    {
+      "id": 5,
+      "name": "BS COMPUTERS",
+      "email": "user3@example.com",
+      "password": "user",
+
+      "role": "user"
     }
   ]
 }

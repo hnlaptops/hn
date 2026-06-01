@@ -19,11 +19,18 @@ const signInAccounts = [
     tone: "border-sky-200 bg-sky-50/80 hover:bg-sky-100/70",
   },
   {
-    key: "it-computers",
-    label: "IT COMPUTERS",
-    email: "user2@example.com",
-    helper: "User access",
-    tone: "border-emerald-200 bg-emerald-50/80 hover:bg-emerald-100/70",
+    "key": "it-computers",
+    "label": "IT COMPUTERS",
+    "email": "user2@example.com",
+    "helper": "User access",
+    "tone": "border-emerald-200 bg-emerald-50/80 hover:bg-emerald-100/70",
+  },
+  {
+    "key": "bs-computers",
+    "label": "BS COMPUTERS",
+    "email": "user3@example.com",
+    "helper": "User access",
+    "tone": "border-purple-200 bg-purple-50/80 hover:bg-purple-100/70",
   },
 ] as const;
 
@@ -114,21 +121,37 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
           </p>
         </section>
 
-        <section className="mt-6 grid gap-4 md:grid-cols-3">
-          {signInAccounts.map((account) => (
+        <section className="mt-6 space-y-4">
+          <div className="flex justify-center">
             <Link
-              key={account.key}
-              to={`/?account=${account.key}`}
-              className={`rounded-2xl border p-6 transition ${account.tone}`}
+              key={signInAccounts[0].key}
+              to={`/?account=${signInAccounts[0].key}`}
+              className={`w-full max-w-xs rounded-2xl border p-6 text-center transition ${signInAccounts[0].tone}`}
             >
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-600">
-                {account.helper}
+                {signInAccounts[0].helper}
               </p>
               <h2 className="mt-3 text-2xl font-bold leading-tight text-slate-900">
-                {account.label}
+                {signInAccounts[0].label}
               </h2>
             </Link>
-          ))}
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+            {signInAccounts.slice(1).map((account) => (
+              <Link
+                key={account.key}
+                to={`/?account=${account.key}`}
+                className={`rounded-2xl border p-6 transition ${account.tone}`}
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-600">
+                  {account.helper}
+                </p>
+                <h2 className="mt-3 text-2xl font-bold leading-tight text-slate-900">
+                  {account.label}
+                </h2>
+              </Link>
+            ))}
+          </div>
         </section>
 
         {selectedAccount ? (
