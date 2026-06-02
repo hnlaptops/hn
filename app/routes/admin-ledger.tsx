@@ -177,7 +177,7 @@ export async function clientAction({ serverAction, request }: Route.ClientAction
   useStore.getState().logAction({ operation: "update", collection: "purchases", status: "success" });
   useStore.getState().logAction({ operation: "update", collection: "sales", status: "success" });
 
-  return redirect("/admin");
+  return redirect("/admin/ledger");
 }
 
 export default function AdminLedger({ loaderData, actionData }: Route.ComponentProps) {
@@ -288,13 +288,13 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-3">
             <Link
-              to="/admin"
+              to="/admin/ledger"
               className="w-full rounded-xl border border-slate-900 bg-slate-900 px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-slate-700 sm:w-auto"
             >
               Ledger
             </Link>
             <Link
-              to="/admin/stock"
+              to="/admin"
               className="w-full rounded-xl border-2 border-slate-400 bg-slate-50 px-4 py-2.5 text-center text-sm font-bold text-slate-800 transition hover:bg-slate-100 sm:w-auto"
             >
               Stock
@@ -308,7 +308,7 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
           </div>
         </div>
 
-        <Form method="get" action="/admin" className="mt-4 flex gap-2">
+        <Form method="get" action="/admin/ledger" className="mt-4 flex gap-2">
           <input
             type="text"
             name="ledgerSearch"
@@ -405,7 +405,7 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
                         <td className={`border-r px-2.5 py-1.5 ${cellBorderTone}`}>{row.type === "sell" ? getDisplayName(row.actor) : ""}</td>
                         <td className="px-2.5 py-1.5">
                           <Link
-                            to={`/admin?edit=${row.id}`}
+                            to={`/admin/ledger?edit=${row.id}`}
                             className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
                           >
                             Edit
@@ -430,7 +430,7 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
                 <p className="mt-1 text-sm text-slate-600">Update record details.</p>
               </div>
               <Link
-                to="/admin"
+                to="/admin/ledger"
                 className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
               >
                 Close
@@ -489,10 +489,25 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
                   className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
                   required
                 >
-                  <option value="i3">i3</option>
-                  <option value="i5">i5</option>
-                  <option value="i7">i7</option>
-                  <option value="i9">i9</option>
+                  <optgroup label="Intel">
+                    <option value="i3">i3</option>
+                    <option value="i5">i5</option>
+                    <option value="i7">i7</option>
+                    <option value="i9">i9</option>
+                  </optgroup>
+                  <optgroup label="AMD Ryzen">
+                    <option value="ryzen 3">Ryzen 3</option>
+                    <option value="ryzen 5">Ryzen 5</option>
+                    <option value="ryzen 7">Ryzen 7</option>
+                    <option value="ryzen 9">Ryzen 9</option>
+                  </optgroup>
+                  <optgroup label="AMD A-Series">
+                    <option value="a4">A4</option>
+                    <option value="a6">A6</option>
+                    <option value="a8">A8</option>
+                    <option value="a10">A10</option>
+                    <option value="a12">A12</option>
+                  </optgroup>
                 </select>
               </div>
               <div>
@@ -551,6 +566,7 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
                   className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
                 >
                   <option value="">No GPU</option>
+                  <option value="1GB">1GB</option>
                   <option value="2GB">2GB</option>
                   <option value="4GB">4GB</option>
                   <option value="6GB">6GB</option>

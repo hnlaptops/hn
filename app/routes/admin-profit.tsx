@@ -79,13 +79,13 @@ export default function AdminProfit({ loaderData }: Route.ComponentProps) {
         </div>
         <div className="mt-4 flex flex-wrap gap-3">
           <Link
-            to="/admin"
+            to="/admin/ledger"
             className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto"
           >
             Ledger
           </Link>
           <Link
-            to="/admin/stock"
+            to="/admin"
             className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto"
           >
             Stock

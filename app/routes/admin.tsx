@@ -15,7 +15,7 @@ import {
 } from "../pos.server";
 import { useStore, pkFormat } from "../store";
 
-const ALLOWED_PROCESSORS = ["i3", "i5", "i7", "i9"] as const;
+const ALLOWED_PROCESSORS = ["i3", "i5", "i7", "i9", "ryzen 3", "ryzen 5", "ryzen 7", "ryzen 9", "a4", "a6", "a8", "a10", "a12"] as const;
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -67,7 +67,7 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionData>
     }
 
     if (!ALLOWED_PROCESSORS.includes(processor as (typeof ALLOWED_PROCESSORS)[number])) {
-      return { error: "Processor must be i3, i5, i7, or i9." };
+      return { error: "Invalid processor selected." };
     }
 
     if (!isMacBook && (!Number.isInteger(generation) || generation < 1 || generation > 15)) {
@@ -249,13 +249,13 @@ export default function AdminHome({ loaderData, actionData }: Route.ComponentPro
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-3">
             <Link
-              to="/admin"
+              to="/admin/ledger"
               className="w-full rounded-xl border-2 border-slate-400 bg-slate-50 px-4 py-2.5 text-center text-sm font-bold text-slate-800 transition hover:bg-slate-100 sm:w-auto"
             >
               Ledger
             </Link>
             <Link
-              to="/admin/stock"
+              to="/admin"
               className="w-full rounded-xl border border-slate-900 bg-slate-900 px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-slate-700 sm:w-auto"
             >
               Stock
@@ -269,13 +269,13 @@ export default function AdminHome({ loaderData, actionData }: Route.ComponentPro
           </div>
           <div className="flex flex-wrap gap-3 sm:justify-end">
             <Link
-              to="/admin/stock?modal=buy"
+              to="/admin?modal=buy"
               className="w-full rounded-xl border border-sky-300 bg-sky-50 px-4 py-2.5 text-center text-sm font-semibold text-sky-800 transition hover:bg-sky-100 sm:w-auto"
             >
               Buy
             </Link>
             <Link
-              to={`/admin/stock?modal=sell${loaderData.sellSearch ? `&sellSearch=${encodeURIComponent(loaderData.sellSearch)}` : ""}`}
+              to={`/admin?modal=sell${loaderData.sellSearch ? `&sellSearch=${encodeURIComponent(loaderData.sellSearch)}` : ""}`}
               className="w-full rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-center text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 sm:w-auto"
             >
               Sell
@@ -283,7 +283,7 @@ export default function AdminHome({ loaderData, actionData }: Route.ComponentPro
           </div>
         </div>
 
-        <Form method="get" action="/admin/stock" className="mt-4 flex gap-2">
+        <Form method="get" action="/admin" className="mt-4 flex gap-2">
           <input
             type="text"
             name="stockSearch"
@@ -347,7 +347,7 @@ export default function AdminHome({ loaderData, actionData }: Route.ComponentPro
                     <td className="px-2.5 py-1.5 border-r border-slate-200 text-slate-700">{getDisplayName(purchase.createdBy)}</td>
                     <td className="px-2.5 py-1.5">
                       <Link
-                        to={`/admin/stock?edit=${purchase.id}${loaderData.stockSearch ? `&stockSearch=${encodeURIComponent(loaderData.stockSearch)}` : ""}`}
+                        to={`/admin?edit=${purchase.id}${loaderData.stockSearch ? `&stockSearch=${encodeURIComponent(loaderData.stockSearch)}` : ""}`}
                         className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
                       >
                         Edit
@@ -364,7 +364,7 @@ export default function AdminHome({ loaderData, actionData }: Route.ComponentPro
       {loaderData.edit ? (() => {
         const record = loaderData.purchases.find((r) => r.id === loaderData.edit);
         if (!record) return null;
-        const backUrl = `/admin/stock${loaderData.stockSearch ? `?stockSearch=${encodeURIComponent(loaderData.stockSearch)}` : ""}`;
+        const backUrl = `/admin${loaderData.stockSearch ? `?stockSearch=${encodeURIComponent(loaderData.stockSearch)}` : ""}`;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 px-4">
             <section className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_22px_72px_-36px_rgba(15,23,42,0.75)] sm:p-8">
@@ -431,10 +431,25 @@ export default function AdminHome({ loaderData, actionData }: Route.ComponentPro
                     className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
                     required
                   >
-                    <option value="i3">i3</option>
-                    <option value="i5">i5</option>
-                    <option value="i7">i7</option>
-                    <option value="i9">i9</option>
+                    <optgroup label="Intel">
+                      <option value="i3">i3</option>
+                      <option value="i5">i5</option>
+                      <option value="i7">i7</option>
+                      <option value="i9">i9</option>
+                    </optgroup>
+                    <optgroup label="AMD Ryzen">
+                      <option value="ryzen 3">Ryzen 3</option>
+                      <option value="ryzen 5">Ryzen 5</option>
+                      <option value="ryzen 7">Ryzen 7</option>
+                      <option value="ryzen 9">Ryzen 9</option>
+                    </optgroup>
+                    <optgroup label="AMD A-Series">
+                      <option value="a4">A4</option>
+                      <option value="a6">A6</option>
+                      <option value="a8">A8</option>
+                      <option value="a10">A10</option>
+                      <option value="a12">A12</option>
+                    </optgroup>
                   </select>
                 </div>
                 <div>
@@ -493,6 +508,7 @@ export default function AdminHome({ loaderData, actionData }: Route.ComponentPro
                     className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
                   >
                     <option value="">No GPU</option>
+<option value="1GB">1GB</option>
                     <option value="2GB">2GB</option>
                     <option value="4GB">4GB</option>
                     <option value="6GB">6GB</option>
@@ -573,7 +589,7 @@ export default function AdminHome({ loaderData, actionData }: Route.ComponentPro
                 <p className="mt-1 text-sm text-slate-600">Add new stock to inventory.</p>
               </div>
               <Link
-                to="/admin/stock"
+                to="/admin"
                 className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
               >
                 Close
@@ -625,10 +641,25 @@ export default function AdminHome({ loaderData, actionData }: Route.ComponentPro
                   className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
                   required
                 >
-                  <option value="i3">i3</option>
-                  <option value="i5">i5</option>
-                  <option value="i7">i7</option>
-                  <option value="i9">i9</option>
+                  <optgroup label="Intel">
+                    <option value="i3">i3</option>
+                    <option value="i5">i5</option>
+                    <option value="i7">i7</option>
+                    <option value="i9">i9</option>
+                  </optgroup>
+                  <optgroup label="AMD Ryzen">
+                    <option value="ryzen 3">Ryzen 3</option>
+                    <option value="ryzen 5">Ryzen 5</option>
+                    <option value="ryzen 7">Ryzen 7</option>
+                    <option value="ryzen 9">Ryzen 9</option>
+                  </optgroup>
+                  <optgroup label="AMD A-Series">
+                    <option value="a4">A4</option>
+                    <option value="a6">A6</option>
+                    <option value="a8">A8</option>
+                    <option value="a10">A10</option>
+                    <option value="a12">A12</option>
+                  </optgroup>
                 </select>
               </div>
               <div>
@@ -695,6 +726,7 @@ export default function AdminHome({ loaderData, actionData }: Route.ComponentPro
                   className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
                 >
                   <option value="">No GPU</option>
+                  <option value="1GB">1GB</option>
                   <option value="2GB">2GB</option>
                   <option value="4GB">4GB</option>
                   <option value="6GB">6GB</option>
@@ -758,7 +790,7 @@ export default function AdminHome({ loaderData, actionData }: Route.ComponentPro
                 <p className="mt-1 text-sm text-slate-600">Search stock, set quantity and sold price, then sell.</p>
               </div>
               <Link
-                to="/admin/stock"
+                to="/admin"
                 className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
               >
                 Close

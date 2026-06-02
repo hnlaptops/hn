@@ -16,7 +16,7 @@ export type PurchaseRecord = {
   id: string;
   laptopName: string;
   model: string;
-  processor: "i3" | "i5" | "i7" | "i9";
+  processor: "i3" | "i5" | "i7" | "i9" | "ryzen 3" | "ryzen 5" | "ryzen 7" | "ryzen 9" | "a4" | "a6" | "a8" | "a10" | "a12";
   generation: number;
   year: number | null;
   isMacBook: boolean;
@@ -31,7 +31,7 @@ export type PurchaseRecord = {
   ledgerSnapshot: {
     laptopName: string;
     model: string;
-    processor: "i3" | "i5" | "i7" | "i9";
+    processor: "i3" | "i5" | "i7" | "i9" | "ryzen 3" | "ryzen 5" | "ryzen 7" | "ryzen 9" | "a4" | "a6" | "a8" | "a10" | "a12";
     generation: number;
     year: number | null;
     isMacBook: boolean;
@@ -51,7 +51,7 @@ export type SaleRecord = {
   stockRecordId: string;
   laptopName: string;
   model: string;
-  processor: "i3" | "i5" | "i7" | "i9";
+  processor: "i3" | "i5" | "i7" | "i9" | "ryzen 3" | "ryzen 5" | "ryzen 7" | "ryzen 9" | "a4" | "a6" | "a8" | "a10" | "a12";
   generation: number;
   year: number | null;
   isMacBook: boolean;
@@ -73,7 +73,7 @@ export type LedgerEntry = {
   dateTime: string;
   laptopName: string;
   model: string;
-  processor: "i3" | "i5" | "i7" | "i9";
+  processor: "i3" | "i5" | "i7" | "i9" | "ryzen 3" | "ryzen 5" | "ryzen 7" | "ryzen 9" | "a4" | "a6" | "a8" | "a10" | "a12";
   generation: number;
   year: number | null;
   isMacBook: boolean;
@@ -91,7 +91,7 @@ export type LedgerEntry = {
 type PurchaseInput = {
   laptopName: string;
   model: string;
-  processor: "i3" | "i5" | "i7" | "i9";
+  processor: "i3" | "i5" | "i7" | "i9" | "ryzen 3" | "ryzen 5" | "ryzen 7" | "ryzen 9" | "a4" | "a6" | "a8" | "a10" | "a12";
   generation: number;
   year: number | null;
   isMacBook: boolean;
@@ -409,7 +409,7 @@ export async function updatePurchaseRecord(
   updates: {
     laptopName?: string;
     model?: string;
-    processor?: "i3" | "i5" | "i7" | "i9";
+    processor?: "i3" | "i5" | "i7" | "i9" | "ryzen 3" | "ryzen 5" | "ryzen 7" | "ryzen 9" | "a4" | "a6" | "a8" | "a10" | "a12";
     generation?: number;
     year?: number | null;
     isMacBook?: boolean;
@@ -462,7 +462,7 @@ export async function updateSaleRecord(
   updates: {
     laptopName?: string;
     model?: string;
-    processor?: "i3" | "i5" | "i7" | "i9";
+    processor?: "i3" | "i5" | "i7" | "i9" | "ryzen 3" | "ryzen 5" | "ryzen 7" | "ryzen 9" | "a4" | "a6" | "a8" | "a10" | "a12";
     generation?: number;
     year?: number | null;
     isMacBook?: boolean;
