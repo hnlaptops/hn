@@ -489,6 +489,49 @@ export async function updateSaleRecord(
   });
 }
 
+export async function returnToStock(
+  saleId: string,
+): Promise<SellResult> {
+  if (!saleId) {
+    return { success: false, error: "Invalid sale record." };
+  }
+
+  const saleRef = doc(db, "sales", saleId);
+  const saleSnap = await getDoc(saleRef);
+
+  if (!saleSnap.exists()) {
+    return { success: false, error: "Sale record not found." };
+  }
+
+  const saleData = toSaleRecord(saleSnap.id, saleSnap.data() as Record<string, unknown>);
+
+  const purchaseRef = doc(db, "purchases", saleData.stockRecordId);
+  const purchaseSnap = await getDoc(purchaseRef);
+
+  if (!purchaseSnap.exists()) {
+    return { success: false, error: "Associated stock record not found." };
+  }
+
+  const purchaseData = toPurchaseRecord(purchaseSnap.id, purchaseSnap.data() as Record<string, unknown>);
+
+  const newQuantity = purchaseData.quantity + saleData.quantity;
+
+  await updateDoc(purchaseRef, {
+    quantity: newQuantity,
+    totalPrice: Number((newQuantity * purchaseData.unitPrice).toFixed(2)),
+  });
+
+  const ledgerQ = query(ledgerCol, where("type", "==", "sell"), where("recordId", "==", saleId));
+  const ledgerSnap = await getDocs(ledgerQ);
+  for (const ledgerDoc of ledgerSnap.docs) {
+    await deleteDoc(doc(db, "ledger", ledgerDoc.id));
+  }
+
+  await deleteDoc(saleRef);
+
+  return { success: true };
+}
+
 export async function deletePurchaseRecord(id: string): Promise<void> {
   const ref = doc(db, "purchases", id);
   await deleteDoc(ref);

@@ -1,6 +1,40 @@
 import { create } from "zustand";
 import type { PurchaseRecord, SaleRecord, LedgerEntry } from "./pos.server";
 
+export function matchesSearch(
+  record: {
+    laptopName: string;
+    model: string;
+    processor: string;
+    generation: number;
+    year: number | null;
+    ram: string;
+    rom: string;
+    gpu: string;
+  },
+  query: string,
+): boolean {
+  if (!query) return true;
+  const keywords = query.toLowerCase().split(/\s+/).filter(Boolean);
+  return keywords.every((keyword) => {
+    if (keyword === "gpu") return record.gpu.trim().length > 0;
+    const searchable = [
+      record.laptopName,
+      record.model,
+      record.processor,
+      `${record.generation}th`,
+      record.year?.toString() ?? "",
+      record.ram,
+      record.rom,
+      record.gpu,
+      `gen ${record.generation}`,
+    ]
+      .filter(Boolean)
+      .map((f) => f.toLowerCase());
+    return searchable.some((field) => field.includes(keyword));
+  });
+}
+
 export function pkFormat(n: number): string {
   return Math.round(n).toLocaleString("en-US");
 }

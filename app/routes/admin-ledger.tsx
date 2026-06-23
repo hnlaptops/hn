@@ -11,10 +11,11 @@ import {
   deletePurchaseRecord,
   deleteSaleRecord,
   getSalesByStockRecordId,
+  returnToStock,
 } from "../pos.server";
 import { doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../firebase/firebase";
-import { useStore, pkFormat } from "../store";
+import { useStore, pkFormat, matchesSearch } from "../store";
 
 function getDisplayName(name: string): string {
   if (name === "Admin User") return "HN";
@@ -115,6 +116,19 @@ export async function action({ request }: Route.ActionArgs): Promise<{ error?: s
     return {};
   }
 
+  if (intent === "return") {
+    const id = String(formData.get("id") ?? "");
+
+    if (!id) return null;
+
+    const result = await returnToStock(id);
+    if (!result.success) {
+      return { error: result.error } as const;
+    }
+
+    return {};
+  }
+
   if (intent === "delete") {
     const type = String(formData.get("type") ?? "");
     const id = String(formData.get("id") ?? "");
@@ -183,7 +197,7 @@ export async function clientAction({ serverAction, request }: Route.ClientAction
 export default function AdminLedger({ loaderData, actionData }: Route.ComponentProps) {
   const rows: LedgerRow[] = (
     loaderData.ledgerEntries.length > 0
-      ? loaderData.ledgerEntries.map((entry) => ({
+      ? loaderData.ledgerEntries.filter((entry) => (entry as { type: string }).type !== "return").map((entry) => ({
           id: `${entry.type}-${entry.id}`,
           type: entry.type,
           recordId: entry.recordId,
@@ -262,12 +276,8 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
   const editRow = rows.find((r) => r.id === loaderData.edit);
   const [ledgerIsMacBook, setLedgerIsMacBook] = useState(editRow?.isMacBook ?? false);
 
-  const ledgerQuery = loaderData.ledgerSearch?.toLowerCase() ?? "";
-  const filteredRows = ledgerQuery
-    ? rows.filter((r) =>
-        `${r.laptopName} ${r.processor} ${r.generation}th ${r.year ?? ""} ${r.model} ${r.ram} ${r.rom} ${r.gpu}`.toLowerCase().includes(ledgerQuery)
-      )
-    : rows;
+  const ledgerQuery = loaderData.ledgerSearch ?? "";
+  const filteredRows = ledgerQuery ? rows.filter((r) => matchesSearch(r, ledgerQuery)) : rows;
 
   let lastDateLabel = "";
 
@@ -276,6 +286,9 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
      <section className="fixed top-0 left-0 right-0 z-50 border-b border-slate-200 bg-white px-4 py-3">
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Admin Panel</p>
+          <span className="text-sm font-medium text-slate-600">
+            {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+          </span>
           <Form method="post" action="/logout" onSubmit={(e) => { if (!window.confirm("Are you sure you want to logout?")) e.preventDefault(); }}>
             <button
               type="submit"
@@ -306,6 +319,20 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
               Profit
             </Link>
           </div>
+          <div className="flex flex-wrap gap-3 sm:justify-end">
+            <Link
+              to="/admin?modal=buy"
+              className="w-full rounded-xl border border-sky-300 bg-sky-50 px-4 py-2.5 text-center text-sm font-semibold text-sky-800 transition hover:bg-sky-100 sm:w-auto"
+            >
+              Buy
+            </Link>
+            <Link
+              to="/admin?modal=sell"
+              className="w-full rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-center text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 sm:w-auto"
+            >
+              Sell
+            </Link>
+          </div>
         </div>
 
         <Form method="get" action="/admin/ledger" className="mt-4 flex gap-2">
@@ -313,7 +340,7 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
             type="text"
             name="ledgerSearch"
             defaultValue={loaderData.ledgerSearch}
-            placeholder="Search by name, processor, generation, model"
+            placeholder="Search keywords (e.g. dell 6th, i5, 8gb, gpu)"
             autoFocus
             className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
           />
@@ -410,6 +437,18 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
                           >
                             Edit
                           </Link>
+                          {row.type === "sell" ? (
+                            <Form method="post" style={{ display: "inline" }} onSubmit={(e) => { if (!window.confirm("Return this item to stock?")) e.preventDefault(); }}>
+                              <input type="hidden" name="intent" value="return" />
+                              <input type="hidden" name="id" value={row.recordId} />
+                              <button
+                                type="submit"
+                                className="rounded-lg border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 transition hover:bg-amber-100"
+                              >
+                                Return
+                              </button>
+                            </Form>
+                          ) : null}
                         </td>
                       </tr>
                     </Fragment>

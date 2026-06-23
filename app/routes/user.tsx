@@ -2,16 +2,14 @@ import type { Route } from "./+types/user";
 import { Form, Link, redirect } from "react-router";
 import { requireRole } from "../auth.server";
 import { getPurchaseRecords, getSaleRecords, getLedgerEntries, sellFromStock } from "../pos.server";
-import { useStore, pkFormat } from "../store";
+import { useStore, pkFormat, matchesSearch } from "../store";
 
-type ActionData = {
-  error?: string;
-};
+const ALLOWED_PROCESSORS = ["i3", "i5", "i7", "i9", "ryzen 3", "ryzen 5", "ryzen 7", "ryzen 9", "a4", "a6", "a8", "a10", "a12"] as const;
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "User Home" },
-    { name: "description", content: "User home page" },
+    { title: "User Stock" },
+    { name: "description", content: "User stock page" },
   ];
 }
 
@@ -20,7 +18,6 @@ export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const sellSearch = url.searchParams.get("sellSearch")?.trim() ?? "";
   const stockSearch = url.searchParams.get("stockSearch")?.trim() ?? "";
-
   return {
     user,
     purchases: await getPurchaseRecords(),
@@ -98,19 +95,13 @@ function getDisplayName(name: string): string {
 export default function UserHome({ loaderData, actionData }: Route.ComponentProps) {
   const userName = loaderData.user.name;
 
-  function matchesSearch(record: typeof loaderData.purchases[number], query: string): boolean {
-    if (!query) return true;
-    const text = `${record.laptopName} ${record.model} ${record.processor} gen ${record.generation}th ${record.year ?? ""} ${record.ram} ${record.rom}`.toLowerCase();
-    return text.includes(query);
-  }
-
-  const stockQuery = loaderData.stockSearch.toLowerCase();
+  const stockQuery = loaderData.stockSearch;
   const myStock = loaderData.purchases.filter((r) => r.createdBy === userName && r.quantity > 0 && matchesSearch(r, stockQuery));
   const allStock = loaderData.purchases.filter((r) => r.quantity > 0 && matchesSearch(r, stockQuery));
 
   const stockView = loaderData.stockView;
 
-  const sellQuery = loaderData.sellSearch.toLowerCase();
+  const sellQuery = loaderData.sellSearch;
   const sellableRecords = loaderData.purchases.filter((r) => r.createdBy === userName && r.quantity > 0 && matchesSearch(r, sellQuery));
 
   return (
@@ -118,6 +109,9 @@ export default function UserHome({ loaderData, actionData }: Route.ComponentProp
 <section className="fixed top-0 left-0 right-0 z-50 border-b border-slate-200 bg-white px-4 py-3">
         <div className="flex items-start justify-between gap-3">
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">{loaderData.user.name}</p>
+          <span className="text-sm font-medium text-slate-600">
+            {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+          </span>
           <Form method="post" action="/logout" onSubmit={(e) => { if (!window.confirm("Are you sure you want to logout?")) e.preventDefault(); }}>
             <button
               type="submit"
@@ -179,7 +173,7 @@ export default function UserHome({ loaderData, actionData }: Route.ComponentProp
             type="text"
             name="stockSearch"
             defaultValue={loaderData.stockSearch}
-            placeholder="Search stock"
+            placeholder="Search keywords (e.g. dell 6th, i5, 8gb, gpu)"
             autoFocus
             className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
           />
@@ -309,7 +303,7 @@ export default function UserHome({ loaderData, actionData }: Route.ComponentProp
                 type="text"
                 name="sellSearch"
                 defaultValue={loaderData.sellSearch}
-                placeholder="Search laptop/model/processor/gen/ram/rom"
+                placeholder="Search keywords (e.g. dell 6th, i5, 8gb, gpu)"
                 autoFocus
                 className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
               />

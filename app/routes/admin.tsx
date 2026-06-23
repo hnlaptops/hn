@@ -13,7 +13,7 @@ import {
   deletePurchaseRecord,
   getSalesByStockRecordId,
 } from "../pos.server";
-import { useStore, pkFormat } from "../store";
+import { useStore, pkFormat, matchesSearch } from "../store";
 
 const ALLOWED_PROCESSORS = ["i3", "i5", "i7", "i9", "ryzen 3", "ryzen 5", "ryzen 7", "ryzen 9", "a4", "a6", "a8", "a10", "a12"] as const;
 
@@ -214,22 +214,18 @@ export default function AdminHome({ loaderData, actionData }: Route.ComponentPro
   useEffect(() => {
     if (editRecord) setEditIsMacBook(editRecord.isMacBook);
   }, [editRecord]);
-  const stockQuery = loaderData.stockSearch.toLowerCase();
+  const stockQuery = loaderData.stockSearch;
   const filteredPurchases = loaderData.purchases.filter((record) => {
     if (record.quantity <= 0) return false;
     if (!stockQuery) return true;
-
-    const text = `${record.laptopName} ${record.model} ${record.processor} gen ${record.generation}th ${record.year ?? ""} ${record.ram} ${record.rom} ${record.gpu}`.toLowerCase();
-    return text.includes(stockQuery);
+    return matchesSearch(record, stockQuery);
   });
 
-  const sellQuery = loaderData.sellSearch.toLowerCase();
+  const sellQuery = loaderData.sellSearch;
   const sellableRecords = loaderData.purchases.filter((record) => {
     if (record.quantity <= 0) return false;
     if (!sellQuery) return true;
-
-    const text = `${record.laptopName} ${record.model} ${record.processor} gen ${record.generation}th ${record.year ?? ""} ${record.ram} ${record.rom} ${record.gpu}`.toLowerCase();
-    return text.includes(sellQuery);
+    return matchesSearch(record, sellQuery);
   });
 
   return (
@@ -237,6 +233,9 @@ export default function AdminHome({ loaderData, actionData }: Route.ComponentPro
      <section className="fixed top-0 left-0 right-0 z-50 border-b border-slate-200 bg-white px-4 py-3">
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Admin Panel</p>
+          <span className="text-sm font-medium text-slate-600">
+            {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+          </span>
           <Form method="post" action="/logout" onSubmit={(e) => { if (!window.confirm("Are you sure you want to logout?")) e.preventDefault(); }}>
             <button
               type="submit"
@@ -288,7 +287,7 @@ export default function AdminHome({ loaderData, actionData }: Route.ComponentPro
             type="text"
             name="stockSearch"
             defaultValue={loaderData.stockSearch}
-            placeholder="Search stock"
+            placeholder="Search keywords (e.g. dell 6th, i5, 8gb, gpu)"
             autoFocus
             className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
           />
@@ -803,7 +802,7 @@ export default function AdminHome({ loaderData, actionData }: Route.ComponentPro
                 type="text"
                 name="sellSearch"
                 defaultValue={loaderData.sellSearch}
-                placeholder="Search laptop/model/processor/gen/ram/rom"
+                placeholder="Search keywords (e.g. dell 6th, i5, 8gb, gpu)"
                 autoFocus
                 className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
               />

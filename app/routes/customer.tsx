@@ -27,6 +27,9 @@ export default function CustomerView({ loaderData }: Route.ComponentProps) {
       <section className="fixed top-0 left-0 right-0 z-50 border-b border-slate-200 bg-white px-4 py-3">
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Available Stock</p>
+          <span className="text-sm font-medium text-slate-600">
+            {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+          </span>
           <Form method="post" action="/logout">
             <button
               type="submit"

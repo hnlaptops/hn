@@ -3,7 +3,7 @@ import type { Route } from "./+types/user-ledger";
 import { Form, Link } from "react-router";
 import { requireRole } from "../auth.server";
 import { getPurchaseRecords, getSaleRecords, getLedgerEntries } from "../pos.server";
-import { useStore, pkFormat } from "../store";
+import { useStore, pkFormat, matchesSearch } from "../store";
 
 function getDisplayName(name: string): string {
   if (name === "Admin User") return "HN";
@@ -154,12 +154,8 @@ export default function UserLedger({ loaderData }: Route.ComponentProps) {
   ).sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
   .filter((r) => r.type === "sell");
 
-  const ledgerQuery = loaderData.ledgerSearch?.toLowerCase() ?? "";
-  const filteredRows = ledgerQuery
-    ? allRows.filter((r) =>
-        `${r.laptopName} ${r.processor} ${r.generation}th ${r.year ?? ""} ${r.model} ${r.ram} ${r.rom} ${r.gpu}`.toLowerCase().includes(ledgerQuery)
-      )
-    : allRows;
+  const ledgerQuery = loaderData.ledgerSearch ?? "";
+  const filteredRows = ledgerQuery ? allRows.filter((r) => matchesSearch(r, ledgerQuery)) : allRows;
 
   let lastDateLabel = "";
 
@@ -168,6 +164,9 @@ export default function UserLedger({ loaderData }: Route.ComponentProps) {
       <section className="fixed top-0 left-0 right-0 z-50 border-b border-slate-200 bg-white px-4 py-3">
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">{loaderData.user.name}</p>
+          <span className="text-sm font-medium text-slate-600">
+            {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+          </span>
           <Form method="post" action="/logout" onSubmit={(e) => { if (!window.confirm("Are you sure you want to logout?")) e.preventDefault(); }}>
             <button
               type="submit"
@@ -192,6 +191,12 @@ export default function UserLedger({ loaderData }: Route.ComponentProps) {
               Stock
             </Link>
           </div>
+          <Link
+            to="/user?modal=sell"
+            className="w-full rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-center text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 sm:w-auto"
+          >
+            Sell
+          </Link>
         </div>
 
         <Form method="get" action="/user/ledger" className="mt-4 flex gap-2">
@@ -199,7 +204,7 @@ export default function UserLedger({ loaderData }: Route.ComponentProps) {
             type="text"
             name="ledgerSearch"
             defaultValue={loaderData.ledgerSearch}
-            placeholder="Search by name, processor, generation, model"
+            placeholder="Search keywords (e.g. dell 6th, i5, 8gb, gpu)"
             autoFocus
             className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
           />

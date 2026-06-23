@@ -68,6 +68,9 @@ export default function AdminProfit({ loaderData }: Route.ComponentProps) {
       <section className="fixed top-0 left-0 right-0 z-50 border-b border-slate-200 bg-white px-4 py-3">
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Admin Panel</p>
+          <span className="text-sm font-medium text-slate-600">
+            {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+          </span>
           <Form method="post" action="/logout" onSubmit={(e) => { if (!window.confirm("Are you sure you want to logout?")) e.preventDefault(); }}>
             <button
               type="submit"
@@ -77,25 +80,41 @@ export default function AdminProfit({ loaderData }: Route.ComponentProps) {
             </button>
           </Form>
         </div>
-        <div className="mt-4 flex flex-wrap gap-3">
-          <Link
-            to="/admin/ledger"
-            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto"
-          >
-            Ledger
-          </Link>
-          <Link
-            to="/admin"
-            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto"
-          >
-            Stock
-          </Link>
-          <Link
-            to="/admin/profit"
-            className="w-full rounded-xl border border-slate-900 bg-slate-900 px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-slate-700 sm:w-auto"
-          >
-            Profit
-          </Link>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-3">
+            <Link
+              to="/admin/ledger"
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto"
+            >
+              Ledger
+            </Link>
+            <Link
+              to="/admin"
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto"
+            >
+              Stock
+            </Link>
+            <Link
+              to="/admin/profit"
+              className="w-full rounded-xl border border-slate-900 bg-slate-900 px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-slate-700 sm:w-auto"
+            >
+              Profit
+            </Link>
+          </div>
+          <div className="flex flex-wrap gap-3 sm:justify-end">
+            <Link
+              to="/admin?modal=buy"
+              className="w-full rounded-xl border border-sky-300 bg-sky-50 px-4 py-2.5 text-center text-sm font-semibold text-sky-800 transition hover:bg-sky-100 sm:w-auto"
+            >
+              Buy
+            </Link>
+            <Link
+              to="/admin?modal=sell"
+              className="w-full rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-center text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 sm:w-auto"
+            >
+              Sell
+            </Link>
+          </div>
         </div>
         <Form method="get" action="/admin/profit" className="mt-4 flex flex-wrap gap-2">
           <input
