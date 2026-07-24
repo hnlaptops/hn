@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 
 import type { Route } from "./+types/admin";
 import { Form, Link, redirect } from "react-router";
+import * as XLSX from "xlsx";
 
 import { requireRole } from "../auth.server";
 import usersData from "../users.json";
@@ -265,8 +266,70 @@ export default function AdminHome({ loaderData, actionData }: Route.ComponentPro
             >
               Profit
             </Link>
+            <a
+              href="https://hnmanager.vercel.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full rounded-xl border border-blue-400 bg-blue-600 px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-blue-500 sm:w-auto"
+            >
+              Manager
+            </a>
           </div>
           <div className="flex flex-wrap gap-3 sm:justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                const stock = loaderData.purchases.filter((r) => r.quantity > 0);
+                const brandOrder = ["dell", "hp", "lenovo", "macbook"];
+                const brandRank = (name: string) => {
+                  const lower = name.toLowerCase();
+                  const idx = brandOrder.findIndex((b) => lower.includes(b));
+                  return idx === -1 ? 99 : idx;
+                };
+                const brandLabel = (name: string) => {
+                  const lower = name.toLowerCase();
+                  for (const b of brandOrder) {
+                    if (lower.includes(b)) return b.toUpperCase();
+                  }
+                  return "OTHERS";
+                };
+                const genRank = (r: typeof stock[number]) =>
+                  r.year ?? r.generation ?? 0;
+                const sorted = [...stock].sort((a, b) => {
+                  const ba = brandRank(a.laptopName);
+                  const bb = brandRank(b.laptopName);
+                  if (ba !== bb) return ba - bb;
+                  return genRank(a) - genRank(b);
+                });
+                const cols = ["LAPTOP", "MODEL", "PROC", "GEN", "RAM", "ROM", "GPU"];
+                const rows: unknown[][] = [];
+                let currentBrand = "";
+                for (const r of sorted) {
+                  const label = brandLabel(r.laptopName);
+                  if (label !== currentBrand) {
+                    currentBrand = label;
+                    rows.push([label]);
+                    rows.push(cols);
+                  }
+                  rows.push([
+                    r.laptopName,
+                    r.model,
+                    r.processor.toUpperCase(),
+                    r.year ?? `${r.generation}th`,
+                    r.ram,
+                    r.rom,
+                    r.gpu || "-",
+                  ]);
+                }
+                const ws = XLSX.utils.aoa_to_sheet(rows);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Stock");
+                XLSX.writeFile(wb, `stock-${new Date().toISOString().split("T")[0]}.xlsx`);
+              }}
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto"
+            >
+              Download
+            </button>
             <Link
               to="/admin?modal=buy"
               className="w-full rounded-xl border border-sky-300 bg-sky-50 px-4 py-2.5 text-center text-sm font-semibold text-sky-800 transition hover:bg-sky-100 sm:w-auto"

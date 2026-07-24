@@ -318,6 +318,14 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
             >
               Profit
             </Link>
+            <a
+              href="https://hnmanager.vercel.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full rounded-xl border border-blue-400 bg-blue-600 px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-blue-500 sm:w-auto"
+            >
+              Manager
+            </a>
           </div>
           <div className="flex flex-wrap gap-3 sm:justify-end">
             <Link

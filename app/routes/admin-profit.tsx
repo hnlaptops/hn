@@ -23,11 +23,24 @@ export async function loader({ request }: Route.LoaderArgs) {
   const to = url.searchParams.get("to") ?? defaultTo;
   const ledgerEntries = await getLedgerEntries();
   const sales = ledgerEntries.filter((e) => e.type === "sell");
-  return { user, sales, from, to };
+
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+  const lastMonthSales = sales.filter((s) => {
+    const d = new Date(s.dateTime).getTime();
+    return d >= lastMonthStart.getTime() && d <= lastMonthEnd.getTime();
+  });
+  const lastMonthProfit = lastMonthSales.reduce(
+    (s, e) => s + (e.unitPrice - (e.boughtPrice ?? 0)) * e.quantity,
+    0,
+  );
+  const lastMonthRevenue = lastMonthSales.reduce((s, e) => s + e.total, 0);
+
+  return { user, sales, from, to, lastMonthProfit, lastMonthRevenue };
 }
 
 export default function AdminProfit({ loaderData }: Route.ComponentProps) {
-  const { sales, from, to } = loaderData;
+  const { sales, from, to, lastMonthProfit, lastMonthRevenue } = loaderData;
   const filteredSales = sales.filter((sale) => {
     const d = new Date(sale.dateTime).getTime();
     if (from && d < new Date(from).getTime()) return false;
@@ -100,6 +113,14 @@ export default function AdminProfit({ loaderData }: Route.ComponentProps) {
             >
               Profit
             </Link>
+            <a
+              href="https://hnmanager.vercel.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full rounded-xl border border-blue-400 bg-blue-600 px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-blue-500 sm:w-auto"
+            >
+              Manager
+            </a>
           </div>
           <div className="flex flex-wrap gap-3 sm:justify-end">
             <Link
@@ -151,7 +172,7 @@ export default function AdminProfit({ loaderData }: Route.ComponentProps) {
           <p className="text-sm text-slate-600 text-center">No sales yet.</p>
         ) : (
           <div className="space-y-3">
-            <div className="grid grid-cols-3 gap-4 max-w-3xl">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 max-w-5xl">
               <div className="rounded-xl border border-slate-200 bg-white p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Period</p>
                 <p className="mt-1 text-sm font-bold text-slate-900">
@@ -166,6 +187,15 @@ export default function AdminProfit({ loaderData }: Route.ComponentProps) {
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Profit</p>
                 <p className={`mt-1 text-lg font-bold ${totalProfit >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
                   {pkFormat(totalProfit)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Last Month ({new Date(new Date().getFullYear(), new Date().getMonth() - 1).toLocaleDateString("en-US", { month: "short" })})
+                </p>
+                <p className="mt-1 text-lg font-bold text-slate-900">{pkFormat(lastMonthRevenue)}</p>
+                <p className={`text-xs font-semibold ${lastMonthProfit >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                  {pkFormat(lastMonthProfit)} profit
                 </p>
               </div>
             </div>
