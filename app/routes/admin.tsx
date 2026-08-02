@@ -229,6 +229,10 @@ export default function AdminHome({ loaderData, actionData }: Route.ComponentPro
     return matchesSearch(record, sellQuery);
   });
 
+  const inStockRecords = loaderData.purchases.filter((record) => record.quantity > 0);
+  const totalInventory = inStockRecords.reduce((s, r) => s + r.quantity, 0);
+  const inStockValue = inStockRecords.reduce((s, r) => s + r.quantity * r.unitPrice, 0);
+
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-10">
      <section className="fixed top-0 left-0 right-0 z-50 border-b border-slate-200 bg-white px-4 py-3">
@@ -365,7 +369,19 @@ export default function AdminHome({ loaderData, actionData }: Route.ComponentPro
       </section>
 
       <section className="mt-32 w-full rounded-2xl border border-slate-200 bg-white p-4">
-        <h2 className="text-lg font-bold text-slate-900">Current Stock</h2>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h2 className="text-lg font-bold text-slate-900">Current Stock</h2>
+          <div className="flex items-center gap-4 text-sm">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">In Stock</p>
+              <p className="text-lg font-bold text-slate-900">{totalInventory} unit{totalInventory !== 1 ? "s" : ""}</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Stock Value</p>
+              <p className="text-lg font-bold text-slate-900">{pkFormat(inStockValue)}</p>
+            </div>
+          </div>
+        </div>
         {filteredPurchases.length === 0 ? (
           <p className="mt-3 text-sm text-slate-600">
             {loaderData.purchases.length === 0 ? "No buying data added yet." : "No stock matched your search."}

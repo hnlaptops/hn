@@ -16,9 +16,12 @@ export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireRole(request, "admin");
   const url = new URL(request.url);
   const now = new Date();
+  const fmtLocal = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-  const defaultFrom = firstDay.toISOString().split("T")[0];
-  const defaultTo = now.toISOString().split("T")[0];
+  const defaultFrom = fmtLocal(firstDay);
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const defaultTo = fmtLocal(lastDay);
   const from = url.searchParams.get("from") ?? defaultFrom;
   const to = url.searchParams.get("to") ?? defaultTo;
   const ledgerEntries = await getLedgerEntries();
@@ -43,7 +46,7 @@ export default function AdminProfit({ loaderData }: Route.ComponentProps) {
   const { sales, from, to, lastMonthProfit, lastMonthRevenue } = loaderData;
   const filteredSales = sales.filter((sale) => {
     const d = new Date(sale.dateTime).getTime();
-    if (from && d < new Date(from).getTime()) return false;
+    if (from && d < new Date(from + "T00:00:00").getTime()) return false;
     if (to && d > new Date(to + "T23:59:59").getTime()) return false;
     return true;
   });
