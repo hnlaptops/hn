@@ -52,6 +52,7 @@ export default function AdminProfit({ loaderData }: Route.ComponentProps) {
   });
   const totalRevenue = filteredSales.reduce((s, e) => s + e.total, 0);
   const totalProfit = filteredSales.reduce((s, e) => s + (e.unitPrice - (e.boughtPrice ?? 0)) * e.quantity, 0);
+  const totalDeposited = filteredSales.reduce((s, e) => s + (e.depositedAmount ?? e.total), 0);
 
   const dailyMap = new Map<string, typeof filteredSales>();
   for (const sale of filteredSales) {
@@ -175,7 +176,7 @@ export default function AdminProfit({ loaderData }: Route.ComponentProps) {
           <p className="text-sm text-slate-600 text-center">No sales yet.</p>
         ) : (
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 max-w-5xl">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-5 max-w-5xl">
               <div className="rounded-xl border border-slate-200 bg-white p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Period</p>
                 <p className="mt-1 text-sm font-bold text-slate-900">
@@ -191,6 +192,10 @@ export default function AdminProfit({ loaderData }: Route.ComponentProps) {
                 <p className={`mt-1 text-lg font-bold ${totalProfit >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
                   {pkFormat(totalProfit)}
                 </p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Deposited</p>
+                <p className="mt-1 text-lg font-bold text-slate-900">{pkFormat(totalDeposited)}</p>
               </div>
               <div className="rounded-xl border border-slate-200 bg-white p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -279,6 +284,7 @@ export default function AdminProfit({ loaderData }: Route.ComponentProps) {
                   <span className={`font-bold ${totalProfit >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
                     {pkFormat(totalProfit)}
                   </span>
+                  <span className="text-slate-900 font-bold">Deposited: {pkFormat(totalDeposited)}</span>
                 </div>
               </div>
             </div>

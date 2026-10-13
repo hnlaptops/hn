@@ -62,8 +62,10 @@ export type SaleRecord = {
   stockUnitPrice: number;
   soldUnitPrice: number;
   totalPrice: number;
+  depositedAmount: number;
   soldBy: string;
   soldAt: string;
+  paymentMethod: "cash" | "online";
 };
 
 export type LedgerEntry = {
@@ -86,6 +88,8 @@ export type LedgerEntry = {
   soldPrice: number | null;
   total: number;
   actor: string;
+  paymentMethod?: "cash" | "online";
+  depositedAmount?: number;
 };
 
 type PurchaseInput = {
@@ -186,8 +190,10 @@ function toSaleRecord(id: string, data: Record<string, unknown>): SaleRecord {
     stockUnitPrice: Number(data.stockUnitPrice ?? 0),
     soldUnitPrice: Number(data.soldUnitPrice ?? 0),
     totalPrice: Number(data.totalPrice ?? 0),
+    depositedAmount: Number(data.depositedAmount ?? 0),
     soldBy: String(data.soldBy ?? ""),
     soldAt: String(data.soldAt ?? ""),
+    paymentMethod: (data.paymentMethod as "cash" | "online") ?? "online",
   };
 }
 
@@ -212,6 +218,8 @@ function toLedgerEntry(id: string, data: Record<string, unknown>): LedgerEntry {
     soldPrice: data.soldPrice != null ? Number(data.soldPrice) : null,
     total: Number(data.total ?? 0),
     actor: String(data.actor ?? ""),
+    paymentMethod: (data.paymentMethod as "cash" | "online") ?? undefined,
+    depositedAmount: data.depositedAmount != null ? Number(data.depositedAmount) : undefined,
   };
 }
 
@@ -299,6 +307,8 @@ export async function sellFromStock(
   sellQuantity: number,
   soldUnitPrice: number,
   soldBy: string,
+  paymentMethod: "cash" | "online" = "online",
+  depositedAmount?: number,
 ): Promise<SellResult> {
   if (!recordId) {
     return { success: false, error: "Invalid stock record." };
@@ -366,8 +376,10 @@ export async function sellFromStock(
     stockUnitPrice: purchaseData.unitPrice,
     soldUnitPrice,
     totalPrice: Number((sellQuantity * soldUnitPrice).toFixed(2)),
+    depositedAmount: depositedAmount || Number((sellQuantity * soldUnitPrice).toFixed(2)),
     soldBy: normalizedSoldBy,
     soldAt: new Date().toISOString(),
+    paymentMethod,
   };
 
   const saleRef = await addDoc(salesCol, saleDocData);
@@ -392,6 +404,8 @@ export async function sellFromStock(
     soldPrice: saleDocData.soldUnitPrice,
     total: saleDocData.totalPrice,
     actor: saleDocData.soldBy,
+    paymentMethod: saleDocData.paymentMethod,
+    depositedAmount: saleDocData.depositedAmount,
   });
 
   const remaining = purchaseData.quantity - sellQuantity;
@@ -473,6 +487,8 @@ export async function updateSaleRecord(
     soldUnitPrice?: number;
     stockUnitPrice?: number;
     soldBy?: string;
+    paymentMethod?: "cash" | "online";
+    depositedAmount?: number;
   },
 ): Promise<void> {
   const ref = doc(db, "sales", id);

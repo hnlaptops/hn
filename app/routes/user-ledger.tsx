@@ -14,7 +14,6 @@ function getDisplayName(name: string): string {
 
 type LedgerRow = {
   id: string;
-  type: "buy" | "sell";
   dateTime: string;
   laptopName: string;
   model: string;
@@ -31,6 +30,8 @@ type LedgerRow = {
   profit: number | null;
   total: number;
   actor: string;
+  paymentMethod?: "cash" | "online";
+  depositedAmount?: number;
 };
 
 export function meta({}: Route.MetaArgs) {
@@ -80,8 +81,7 @@ export default function UserLedger({ loaderData }: Route.ComponentProps) {
       ? loaderData.ledgerEntries
           .filter((e) => e.actor === userName)
           .map((entry) => ({
-            id: `${entry.type}-${entry.id}`,
-            type: entry.type,
+            id: entry.id,
             dateTime: entry.dateTime,
             laptopName: entry.laptopName,
             model: entry.model,
@@ -101,6 +101,8 @@ export default function UserLedger({ loaderData }: Route.ComponentProps) {
                 : null,
             total: entry.total,
             actor: entry.actor,
+            paymentMethod: entry.paymentMethod,
+            depositedAmount: entry.depositedAmount,
           }))
       : [
           ...loaderData.purchases
@@ -126,13 +128,13 @@ export default function UserLedger({ loaderData }: Route.ComponentProps) {
                 profit: null,
                 total: s.totalPrice,
                 actor: s.createdBy || userName,
+                paymentMethod: undefined,
               };
             }),
           ...loaderData.sales
             .filter((s) => s.soldBy === userName)
             .map((sale) => ({
-              id: `sell-${sale.id}`,
-              type: "sell" as const,
+              id: sale.id,
               dateTime: sale.soldAt,
               laptopName: sale.laptopName,
               model: sale.model,
@@ -149,10 +151,12 @@ export default function UserLedger({ loaderData }: Route.ComponentProps) {
               profit: Number(((sale.soldUnitPrice - sale.stockUnitPrice) * sale.quantity).toFixed(2)),
               total: sale.totalPrice,
               actor: sale.soldBy,
+              paymentMethod: sale.paymentMethod,
+              depositedAmount: sale.depositedAmount,
             })),
         ]
   ).sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
-  .filter((r) => r.type === "sell");
+  .filter((r) => r.boughtPrice != null);
 
   const ledgerQuery = loaderData.ledgerSearch ?? "";
   const filteredRows = ledgerQuery ? allRows.filter((r) => matchesSearch(r, ledgerQuery)) : allRows;
@@ -227,7 +231,6 @@ export default function UserLedger({ loaderData }: Route.ComponentProps) {
               <thead className="bg-slate-100 text-slate-700">
                 <tr>
                   <th className="border-r border-slate-200 px-2.5 py-1.5">Date & Time</th>
-                  <th className="border-r border-slate-200 px-2.5 py-1.5">Type</th>
                   <th className="border-r border-slate-200 px-2.5 py-1.5">Laptop</th>
                   <th className="border-r border-slate-200 px-2.5 py-1.5">Model</th>
                   <th className="border-r border-slate-200 px-2.5 py-1.5">Processor</th>
@@ -237,6 +240,8 @@ export default function UserLedger({ loaderData }: Route.ComponentProps) {
                   <th className="border-r border-slate-200 px-2.5 py-1.5">GPU</th>
                   <th className="border-r border-slate-200 px-2.5 py-1.5">Qty</th>
                   <th className="border-r border-slate-200 px-2.5 py-1.5">Sold Price</th>
+                  <th className="px-2.5 py-1.5">Payment</th>
+                  <th className="px-2.5 py-1.5">Deposited</th>
                   <th className="px-2.5 py-1.5">By</th>
                 </tr>
               </thead>
@@ -245,11 +250,11 @@ export default function UserLedger({ loaderData }: Route.ComponentProps) {
                   const dateLabel = new Date(row.dateTime).toLocaleDateString();
                   const shouldRenderDateHeader = dateLabel !== lastDateLabel;
                   const rowTone =
-                    row.type === "sell"
+                    row.boughtPrice != null
                       ? "border-emerald-200 bg-emerald-50 text-emerald-900"
                       : "border-rose-200 bg-rose-50 text-rose-900";
                   const cellBorderTone =
-                    row.type === "sell" ? "border-emerald-200" : "border-rose-200";
+                    row.boughtPrice != null ? "border-emerald-200" : "border-rose-200";
 
                   if (shouldRenderDateHeader) {
                     lastDateLabel = dateLabel;
@@ -268,9 +273,6 @@ export default function UserLedger({ loaderData }: Route.ComponentProps) {
                         <td className={`border-r px-2.5 py-1.5 ${cellBorderTone}`}>
                           {new Date(row.dateTime).toLocaleString("en-US", { year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}
                         </td>
-                        <td className={`border-r px-2.5 py-1.5 font-semibold uppercase ${cellBorderTone}`}>
-                          {row.type}
-                        </td>
                         <td className={`border-r px-2.5 py-1.5 ${cellBorderTone}`}>{row.laptopName}</td>
                         <td className={`border-r px-2.5 py-1.5 ${cellBorderTone}`}>{row.model}</td>
                         <td className={`border-r px-2.5 py-1.5 ${cellBorderTone}`}>{row.processor.toUpperCase()}</td>
@@ -282,6 +284,8 @@ export default function UserLedger({ loaderData }: Route.ComponentProps) {
                         <td className={`border-r px-2.5 py-1.5 ${cellBorderTone}`}>
                           {row.soldPrice != null ? pkFormat(row.soldPrice) : pkFormat(row.unitPrice)}
                         </td>
+                        <td className={`px-2.5 py-1.5 ${cellBorderTone}`}>{row.paymentMethod ?? "-"}</td>
+                        <td className={`px-2.5 py-1.5 ${cellBorderTone}`}>{row.depositedAmount ? pkFormat(row.depositedAmount) : "-"}</td>
                         <td className={`px-2.5 py-1.5 ${cellBorderTone}`}>{getDisplayName(row.actor)}</td>
                       </tr>
                     </Fragment>

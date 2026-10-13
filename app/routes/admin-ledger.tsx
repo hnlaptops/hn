@@ -1,5 +1,4 @@
 import { Fragment, useState, useEffect } from "react";
-
 import type { Route } from "./+types/admin-ledger";
 import { Form, Link, redirect } from "react-router";
 
@@ -26,7 +25,6 @@ function getDisplayName(name: string): string {
 
 type LedgerRow = {
   id: string;
-  type: "buy" | "sell";
   recordId: string;
   dateTime: string;
   laptopName: string;
@@ -45,6 +43,8 @@ type LedgerRow = {
   profit: number | null;
   total: number;
   actor: string;
+  paymentMethod?: "cash" | "online";
+  depositedAmount?: number;
 };
 
 export function meta({}: Route.MetaArgs) {
@@ -105,11 +105,13 @@ export async function action({ request }: Route.ActionArgs): Promise<{ error?: s
       const soldUnitPrice = Number(formData.get("unitPrice"));
       const stockUnitPrice = Number(formData.get("stockUnitPrice"));
       const soldBy = String(formData.get("soldBy") ?? "").trim();
+      const paymentMethod = String(formData.get("paymentMethod") ?? "online") as "cash" | "online";
+      const depositedAmount = Number(formData.get("depositedAmount") ?? 0);
       const ledgerId = String(formData.get("ledgerId") ?? "");
 
       if (ledgerId) {
         const ledgerRef = doc(db, "ledger", ledgerId);
-        await updateDoc(ledgerRef, { laptopName, model, processor, generation, year, isMacBook, ram, rom, gpu, quantity, unitPrice: soldUnitPrice, boughtPrice: stockUnitPrice, soldPrice: soldUnitPrice, actor: soldBy, total: Number((quantity * soldUnitPrice).toFixed(2)) });
+        await updateDoc(ledgerRef, { laptopName, model, processor, generation, year, isMacBook, ram, rom, gpu, quantity, unitPrice: soldUnitPrice, boughtPrice: stockUnitPrice, soldPrice: soldUnitPrice, actor: soldBy, paymentMethod, depositedAmount, total: Number((quantity * soldUnitPrice).toFixed(2)) });
       }
     }
 
@@ -198,8 +200,7 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
   const rows: LedgerRow[] = (
     loaderData.ledgerEntries.length > 0
       ? loaderData.ledgerEntries.filter((entry) => (entry as { type: string }).type !== "return").map((entry) => ({
-          id: `${entry.type}-${entry.id}`,
-          type: entry.type,
+          id: entry.id,
           recordId: entry.recordId,
           dateTime: entry.dateTime,
           laptopName: entry.laptopName,
@@ -221,13 +222,14 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
               : null,
           total: entry.total,
           actor: entry.actor,
+          paymentMethod: entry.paymentMethod,
+          depositedAmount: entry.depositedAmount,
         }))
       : [
           ...loaderData.purchases.map((purchase) => {
             const s = purchase.ledgerSnapshot ?? purchase;
             return {
-              id: `buy-${purchase.id}`,
-              type: "buy" as const,
+              id: purchase.id,
               recordId: purchase.id,
               dateTime: s.createdAt,
               laptopName: s.laptopName,
@@ -246,6 +248,7 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
               profit: null,
               total: s.totalPrice,
               actor: s.createdBy,
+              paymentMethod: undefined,
             };
           }),
           ...loaderData.sales.map((sale) => ({
@@ -269,6 +272,8 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
             profit: Number(((sale.soldUnitPrice - sale.stockUnitPrice) * sale.quantity).toFixed(2)),
             total: sale.totalPrice,
             actor: sale.soldBy,
+            paymentMethod: sale.paymentMethod,
+            depositedAmount: sale.depositedAmount,
           })),
         ]
   ).sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
@@ -371,7 +376,6 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
               <thead className="bg-slate-100 text-slate-700">
                 <tr>
                   <th className="border-r border-slate-200 px-2.5 py-1.5">Date & Time</th>
-                  <th className="border-r border-slate-200 px-2.5 py-1.5">Type</th>
                   <th className="border-r border-slate-200 px-2.5 py-1.5">Laptop</th>
                   <th className="border-r border-slate-200 px-2.5 py-1.5">Model</th>
                   <th className="border-r border-slate-200 px-2.5 py-1.5">Processor</th>
@@ -383,6 +387,8 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
                   <th className="border-r border-slate-200 px-2.5 py-1.5">Price</th>
                   <th className="border-r border-slate-200 px-2.5 py-1.5">Sold Price</th>
                   <th className="border-r border-slate-200 px-2.5 py-1.5">Profit</th>
+                  <th className="border-r border-slate-200 px-2.5 py-1.5">Payment</th>
+                   <th className="border-r border-slate-200 px-2.5 py-1.5">Deposited</th>
                   <th className="border-r border-slate-200 px-2.5 py-1.5">By</th>
                   <th className="px-2.5 py-1.5"></th>
                 </tr>
@@ -392,11 +398,11 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
                   const dateLabel = new Date(row.dateTime).toLocaleDateString();
                   const shouldRenderDateHeader = dateLabel !== lastDateLabel;
                   const rowTone =
-                    row.type === "sell"
+                    row.boughtPrice != null
                       ? "border-emerald-200 bg-emerald-50 text-emerald-900"
                       : "border-rose-200 bg-rose-50 text-rose-900";
                   const cellBorderTone =
-                    row.type === "sell" ? "border-emerald-200" : "border-rose-200";
+                    row.boughtPrice != null ? "border-emerald-200" : "border-rose-200";
 
                   if (shouldRenderDateHeader) {
                     lastDateLabel = dateLabel;
@@ -415,9 +421,6 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
                         <td className={`border-r px-2.5 py-1.5 ${cellBorderTone}`}>
                           {new Date(row.dateTime).toLocaleString("en-US", { year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}
                         </td>
-                        <td className={`border-r px-2.5 py-1.5 font-semibold uppercase ${cellBorderTone}`}>
-                          {row.type}
-                        </td>
                         <td className={`border-r px-2.5 py-1.5 ${cellBorderTone}`}>{row.laptopName}</td>
                         <td className={`border-r px-2.5 py-1.5 ${cellBorderTone}`}>{row.model}</td>
                         <td className={`border-r px-2.5 py-1.5 ${cellBorderTone}`}>{row.processor.toUpperCase()}</td>
@@ -427,7 +430,7 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
                         <td className={`border-r px-2.5 py-1.5 ${cellBorderTone}`}>{row.gpu || "-"}</td>
                         <td className={`border-r px-2.5 py-1.5 ${cellBorderTone}`}>{row.quantity}</td>
                         <td className={`border-r px-2.5 py-1.5 ${cellBorderTone}`}>
-                          {row.type === "sell" && row.boughtPrice != null
+                          {row.boughtPrice != null && row.boughtPrice != null
                             ? `${pkFormat(row.boughtPrice)} → ${pkFormat(row.unitPrice)}`
                             : pkFormat(row.unitPrice)}
                         </td>
@@ -437,7 +440,9 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
                         <td className={`border-r px-2.5 py-1.5 font-semibold ${cellBorderTone}`}>
                           {row.profit != null ? pkFormat(row.profit) : "-"}
                         </td>
-                        <td className={`border-r px-2.5 py-1.5 ${cellBorderTone}`}>{row.type === "sell" ? getDisplayName(row.actor) : ""}</td>
+                        <td className={`border-r px-2.5 py-1.5 ${cellBorderTone}`}>{row.paymentMethod ?? "-"}</td>
+                        <td className={`border-r px-2.5 py-1.5 ${cellBorderTone}`}>{row.depositedAmount ? pkFormat(row.depositedAmount) : "-"}</td>
+                        <td className={`border-r px-2.5 py-1.5 ${cellBorderTone}`}>{row.boughtPrice != null ? getDisplayName(row.actor) : ""}</td>
                         <td className="px-2.5 py-1.5">
                           <Link
                             to={`/admin/ledger?edit=${row.id}`}
@@ -445,7 +450,7 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
                           >
                             Edit
                           </Link>
-                          {row.type === "sell" ? (
+                          {row.boughtPrice != null ? (
                             <Form method="post" style={{ display: "inline" }} onSubmit={(e) => { if (!window.confirm("Return this item to stock?")) e.preventDefault(); }}>
                               <input type="hidden" name="intent" value="return" />
                               <input type="hidden" name="id" value={row.recordId} />
@@ -473,7 +478,7 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
           <section className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_22px_72px_-36px_rgba(15,23,42,0.75)] sm:p-8">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900">Edit {editRow.type === "buy" ? "Purchase" : "Sale"}</h2>
+                <h2 className="text-2xl font-bold text-slate-900">Edit {editRow.boughtPrice == null ? "Purchase" : "Sale"}</h2>
                 <p className="mt-1 text-sm text-slate-600">Update record details.</p>
               </div>
               <Link
@@ -491,9 +496,9 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
             ) : null}
 
             <Form method="post" className="mt-4 grid gap-3 sm:grid-cols-2">
-              <input type="hidden" name="type" value={editRow.type} />
-              <input type="hidden" name="id" value={editRow.recordId || editRow.id.replace(/^(buy|sell)-/, "")} />
-              <input type="hidden" name="ledgerId" value={loaderData.ledgerEntries.length > 0 ? editRow.id.replace(/^(buy|sell)-/, "") : ""} />
+              <input type="hidden" name="type" value={editRow.boughtPrice != null ? "sell" : "buy"} />
+              <input type="hidden" name="id" value={editRow.recordId || editRow.id} />
+              <input type="hidden" name="ledgerId" value={loaderData.ledgerEntries.length > 0 ? editRow.id : ""} />
 
               <label className="flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-700 cursor-pointer transition hover:bg-slate-50 sm:col-span-2">
                 <input
@@ -569,7 +574,7 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
                     placeholder="Year (e.g. 2015)"
                     className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
                     required
-                  />
+                                   />
                 ) : (
                   <select
                     name="generation"
@@ -632,7 +637,7 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
                   placeholder="Quantity"
                   className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
                   required
-                />
+                               />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Unit Price</label>
@@ -645,10 +650,10 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
                   placeholder="Unit price"
                   className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
                   required
-                />
+                               />
               </div>
 
-              {editRow.type === "sell" ? (
+              {editRow.boughtPrice != null ? (
                 <div>
                   <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Bought Price</label>
                   <input
@@ -660,21 +665,50 @@ export default function AdminLedger({ loaderData, actionData }: Route.ComponentP
                     placeholder="Bought price"
                     className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
                     required
-                  />
+                                   />
                 </div>
               ) : null}
 
               <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">{editRow.type === "sell" ? "Sold By" : "Created By"}</label>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">{editRow.boughtPrice != null ? "Sold By" : "Created By"}</label>
                 <input
                   type="text"
-                  name={editRow.type === "sell" ? "soldBy" : "createdBy"}
+                  name={editRow.boughtPrice != null ? "soldBy" : "createdBy"}
                   defaultValue={editRow.actor}
-                  placeholder={editRow.type === "sell" ? "Sold by" : "Created by"}
+                  placeholder={editRow.boughtPrice != null ? "Sold by" : "Created by"}
                   className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
                   required
                 />
               </div>
+
+              {editRow.boughtPrice != null ? (
+                <>
+                  <div>
+                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Payment</label>
+                    <select
+                      name="paymentMethod"
+                      defaultValue={editRow.paymentMethod ?? "online"}
+                      className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
+                      required
+                    >
+                      <option value="cash">Cash</option>
+                      <option value="online">Online</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Deposited Amount</label>
+                    <input
+                      type="number"
+                      name="depositedAmount"
+                      min={0}
+                      step="0.01"
+                      defaultValue={editRow.depositedAmount ?? ""}
+                      placeholder="Amount deposited by customer"
+                      className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
+                                       />
+                  </div>
+                </>
+              ) : null}
 
               <div className="flex gap-3 sm:col-span-2">
                 <button
