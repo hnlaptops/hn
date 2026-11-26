@@ -124,6 +124,78 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionData>
     return {};
   }
 
+  if (intent === "quicksell") {
+    const laptopName = String(formData.get("laptopName") ?? "").trim();
+    const model = String(formData.get("model") ?? "").trim();
+    const processor = String(formData.get("processor") ?? "").trim().toLowerCase();
+    const isMacBook = formData.get("isMacBook") === "on";
+    const year = isMacBook ? Number(formData.get("year")) : null;
+    const generation = isMacBook ? 0 : Number(formData.get("generation"));
+    const ram = String(formData.get("ram") ?? "").trim();
+    const rom = String(formData.get("rom") ?? "").trim();
+    const gpu = String(formData.get("gpu") ?? "").trim();
+    const quantity = Number(formData.get("quantity"));
+    const unitPrice = Number(formData.get("unitPrice"));
+    const soldUnitPrice = Number(formData.get("soldUnitPrice"));
+    const paymentMethod = String(formData.get("paymentMethod") ?? "online") as "cash" | "online";
+    const depositedAmount = Number(formData.get("depositedAmount") || 0);
+    const assignedTo = String(formData.get("assignedTo") ?? "").trim();
+
+    if (!laptopName || !model || !ram || !rom) {
+      return { error: "Laptop, model, RAM, and ROM are required." };
+    }
+
+    if (!ALLOWED_PROCESSORS.includes(processor as (typeof ALLOWED_PROCESSORS)[number])) {
+      return { error: "Invalid processor selected." };
+    }
+
+    if (!isMacBook && (!Number.isInteger(generation) || generation < 1 || generation > 15)) {
+      return { error: "Generation must be from 1st to 15th." };
+    }
+
+    if (isMacBook && (year == null || !Number.isInteger(year) || year < 1900 || year > 2100)) {
+      return { error: "Enter a valid year." };
+    }
+
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      return { error: "Quantity must be greater than zero." };
+    }
+
+    if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
+      return { error: "Buy price must be greater than zero." };
+    }
+
+    if (!Number.isFinite(soldUnitPrice) || soldUnitPrice <= 0) {
+      return { error: "Sell price must be greater than zero." };
+    }
+
+    if (!assignedTo) {
+      return { error: "Please assign this laptop to a user." };
+    }
+
+    const purchase = await addPurchaseRecord({
+      laptopName,
+      model,
+      processor: processor as (typeof ALLOWED_PROCESSORS)[number],
+      generation,
+      year,
+      isMacBook,
+      ram,
+      rom,
+      gpu,
+      quantity,
+      unitPrice,
+      createdBy: assignedTo,
+    });
+
+    const result = await sellFromStock(purchase.id, quantity, soldUnitPrice, user.name, paymentMethod, depositedAmount);
+    if (!result.success) {
+      return { error: result.error };
+    }
+
+    return {};
+  }
+
   if (intent === "edit") {
     const id = String(formData.get("id") ?? "");
     const sales = await getSalesByStockRecordId(id);
@@ -154,10 +226,6 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionData>
 
   if (intent === "delete") {
     const id = String(formData.get("id") ?? "");
-    const sales = await getSalesByStockRecordId(id);
-    if (sales.length > 0) {
-      return { error: "Cannot delete stock that has already been sold. Sales exist in the ledger." };
-    }
 
     await deletePurchaseRecord(id);
     return {};
@@ -347,6 +415,12 @@ export default function AdminHome({ loaderData, actionData }: Route.ComponentPro
               className="w-full rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-center text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 sm:w-auto"
             >
               Sell
+            </Link>
+            <Link
+              to="/admin?modal=quicksell"
+              className="w-full rounded-xl border border-violet-300 bg-violet-50 px-4 py-2.5 text-center text-sm font-semibold text-violet-800 transition hover:bg-violet-100 sm:w-auto"
+            >
+              Quick Sell
             </Link>
           </div>
         </div>
@@ -1002,6 +1076,247 @@ export default function AdminHome({ loaderData, actionData }: Route.ComponentPro
                 </tbody>
               </table>
             </div>
+          </section>
+        </div>
+      ) : null}
+
+      {loaderData.modal === "quicksell" ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 px-4">
+          <section className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_22px_72px_-36px_rgba(15,23,42,0.75)] sm:p-8">
+            <div className="mt-3 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">Quick Sell</h2>
+                <p className="mt-1 text-sm text-slate-600">Add stock and sell it in one step — buy entry and sale are created together.</p>
+              </div>
+              <Link
+                to="/admin"
+                className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              >
+                Close
+              </Link>
+            </div>
+
+            {actionData?.error ? (
+              <p className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                {actionData.error}
+              </p>
+            ) : null}
+
+            <Form method="post" className="mt-4 grid gap-3 sm:grid-cols-2">
+              <input type="hidden" name="intent" value="quicksell" />
+              <label className="flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-700 cursor-pointer transition hover:bg-slate-50 sm:col-span-2">
+                <input
+                  type="checkbox"
+                  name="isMacBook"
+                  checked={isMacBook}
+                  onChange={(e) => setIsMacBook(e.target.checked)}
+                  className="rounded border-slate-300 text-slate-900 focus:ring-slate-500"
+                />
+                This is a MacBook
+              </label>
+
+              <div>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Laptop Name</label>
+                <input
+                  type="text"
+                  name="laptopName"
+                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Model</label>
+                <input
+                  type="text"
+                  name="model"
+                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Processor</label>
+                <select
+                  name="processor"
+                  defaultValue="i5"
+                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
+                  required
+                >
+                  <optgroup label="Intel">
+                    <option value="i3">i3</option>
+                    <option value="i5">i5</option>
+                    <option value="i7">i7</option>
+                    <option value="i9">i9</option>
+                  </optgroup>
+                  <optgroup label="AMD Ryzen">
+                    <option value="ryzen 3">Ryzen 3</option>
+                    <option value="ryzen 5">Ryzen 5</option>
+                    <option value="ryzen 7">Ryzen 7</option>
+                    <option value="ryzen 9">Ryzen 9</option>
+                  </optgroup>
+                  <optgroup label="AMD A-Series">
+                    <option value="a4">A4</option>
+                    <option value="a6">A6</option>
+                    <option value="a8">A8</option>
+                    <option value="a10">A10</option>
+                    <option value="a12">A12</option>
+                  </optgroup>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">{isMacBook ? "Year" : "Generation"}</label>
+                {isMacBook ? (
+                  <input
+                    type="number"
+                    name="year"
+                    min={1900}
+                    max={2100}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
+                    required
+                  />
+                ) : (
+                  <select
+                    name="generation"
+                    defaultValue="10"
+                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
+                    required
+                  >
+                    <option value="1">1st Generation</option>
+                    <option value="2">2nd Generation</option>
+                    <option value="3">3rd Generation</option>
+                    <option value="4">4th Generation</option>
+                    <option value="5">5th Generation</option>
+                    <option value="6">6th Generation</option>
+                    <option value="7">7th Generation</option>
+                    <option value="8">8th Generation</option>
+                    <option value="9">9th Generation</option>
+                    <option value="10">10th Generation</option>
+                    <option value="11">11th Generation</option>
+                    <option value="12">12th Generation</option>
+                    <option value="13">13th Generation</option>
+                    <option value="14">14th Generation</option>
+                    <option value="15">15th Generation</option>
+                  </select>
+                )}
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">RAM</label>
+                <input
+                  type="text"
+                  name="ram"
+                  defaultValue="8"
+                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">ROM</label>
+                <input
+                  type="text"
+                  name="rom"
+                  defaultValue="256"
+                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">GPU</label>
+                <select
+                  name="gpu"
+                  defaultValue=""
+                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
+                >
+                  <option value="">No GPU</option>
+                  <option value="1GB">1GB</option>
+                  <option value="2GB">2GB</option>
+                  <option value="4GB">4GB</option>
+                  <option value="6GB">6GB</option>
+                  <option value="8GB">8GB</option>
+                  <option value="12GB">12GB</option>
+                  <option value="24GB">24GB</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Quantity</label>
+                <input
+                  type="number"
+                  name="quantity"
+                  min={1}
+                  defaultValue={1}
+                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Buy Price</label>
+                <input
+                  type="number"
+                  name="unitPrice"
+                  min={1}
+                  step="0.01"
+                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Assign To</label>
+                <select
+                  name="assignedTo"
+                  defaultValue="NS COMPUTERS"
+                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
+                  required
+                >
+                  {loaderData.assignableUsers.map((name) => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="sm:col-span-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 space-y-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-emerald-800">Sale Details</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-600">Sell Price</label>
+                    <input
+                      type="number"
+                      name="soldUnitPrice"
+                      min={1}
+                      step="0.01"
+                      className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-black text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
+                      required
+                      onChange={(e) => setDepositedAmounts(prev => ({ ...prev, quicksell: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-600">Deposited</label>
+                    <input
+                      type="number"
+                      name="depositedAmount"
+                      min={0}
+                      step="0.01"
+                      placeholder="Auto-synced"
+                      value={depositedAmounts.quicksell || ""}
+                      onChange={(e) => setDepositedAmounts(prev => ({ ...prev, quicksell: e.target.value }))}
+                      className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-5">
+                  <label className="flex items-center gap-1 text-sm text-slate-600">
+                    <input type="radio" name="paymentMethod" value="cash" className="accent-slate-900" /> Cash
+                  </label>
+                  <label className="flex items-center gap-1 text-sm text-slate-600">
+                    <input type="radio" name="paymentMethod" value="online" defaultChecked className="accent-slate-900" /> Online
+                  </label>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="sm:col-span-2 rounded-xl bg-violet-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-violet-600"
+              >
+                Save & Sell
+              </button>
+            </Form>
           </section>
         </div>
       ) : null}
